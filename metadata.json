@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Wakanda",
+  "description": "Official academic management, student result portal, and continuous assessment system for Eminent Royal Crown Academy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

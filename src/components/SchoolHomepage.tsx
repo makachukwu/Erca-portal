@@ -200,7 +200,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
     },
     {
       q: 'How do users access the assessment portal?',
-      a: 'Click "Access Portal" at the top right, then sign in with your credentials to access student results or record continuous assessment scores.'
+      a: 'Click "Staff Login" or "Check Student Results" at the top, then sign in with your credentials to view reports or record continuous assessment scores.'
     }
   ];
 
@@ -277,8 +277,8 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
                 ) : (
                   <>
                     <LogIn className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="hidden xs:inline">Access Portal</span>
-                    <span className="xs:hidden">Login</span>
+                    <span className="hidden xs:inline">Staff Login</span>
+                    <span className="xs:hidden">Staff</span>
                   </>
                 )}
               </button>
@@ -598,7 +598,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
                   }`}
                 >
                   <LogIn className="w-4 h-4" />
-                  <span>Access Portal</span>
+                  <span>Staff Login</span>
                 </button>
 
                 <button
@@ -640,15 +640,15 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
                 </div>
               )}
 
-              {/* TAB 2: ACCESS PORTAL (STAFF & STUDENTS) */}
+              {/* TAB 2: STAFF & TEACHER PORTAL */}
               {activeGateway === 'staff' && (
                 <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
                   <div>
                     <h3 className="text-base font-bold text-[#0a1e3f]">
-                      Access Portal
+                      Staff &amp; Teacher Portal
                     </h3>
                     <p className="text-xs text-slate-600 mt-1">
-                      Unified gateway for staff, teachers, administrators, and students to log in and access portal services.
+                      Portal for staff, teachers, and administrators to record continuous assessments, attendance, and student reports.
                     </p>
                   </div>
                   <button
@@ -656,7 +656,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
                     className="px-5 py-2.5 bg-[#0a1e3f] hover:bg-[#132c57] text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 active:scale-95 shrink-0"
                   >
                     <Lock className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{isAdmin ? 'Open Admin Console' : 'Sign in to Access Portal'}</span>
+                    <span>{isAdmin ? 'Open Admin Console' : 'Open Staff Login'}</span>
                   </button>
                 </div>
               )}
@@ -781,7 +781,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
                 onClick={isAdmin && onNavigateToAdmin ? onNavigateToAdmin : onOpenStaffLogin}
                 className="text-[11px] text-amber-300 hover:text-white underline underline-offset-4 cursor-pointer"
               >
-                {isAdmin ? 'Admin Console' : 'Access Portal'}
+                {isAdmin ? 'Admin Console' : 'Staff Login'}
               </button>
             </div>
 

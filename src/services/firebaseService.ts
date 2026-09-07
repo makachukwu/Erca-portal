@@ -104,7 +104,7 @@ export function getSchoolClasses(): string[] {
 export const INITIAL_DEFAULT_TEACHERS: Teacher[] = [
   {
     Username: 'admin',
-    Password: '',
+    Password: 'admin',
     ClassAssigned: 'Admin',
     FullName: 'Portal Administrator',
     Role: 'admin'
@@ -578,12 +578,55 @@ export async function loadAllData(forceFresh = false): Promise<{
         const data = d.data() as Teacher;
         teachers.push({
           ...data,
-          Password: data.Password || '',
+          Password: data.Password || (data.Username.toLowerCase() === 'admin' ? 'admin' : ''),
           Role: data.Role || (data.Username.toLowerCase() === 'admin' ? 'admin' : 'teacher')
         });
       });
     } else if (cached?.teachers) {
       teachers.push(...cached.teachers);
+    }
+
+    // Ensure primary administrator account is present with Username: 'admin' and Password: 'admin'
+    let adminAccount = teachers.find(
+      (t) => t.Username.toLowerCase() === 'admin' || t.Role === 'admin'
+    );
+    if (!adminAccount) {
+      adminAccount = {
+        Username: 'admin',
+        Password: 'admin',
+        ClassAssigned: 'Admin',
+        FullName: 'Portal Administrator',
+        Role: 'admin'
+      };
+      teachers.unshift(adminAccount);
+      try {
+        await setDoc(doc(db, 'teachers', getTeacherDocId('admin')), adminAccount, { merge: true });
+      } catch {}
+    } else {
+      let needsSync = false;
+      if (adminAccount.Username !== 'admin') {
+        adminAccount.Username = 'admin';
+        needsSync = true;
+      }
+      if (adminAccount.Password !== 'admin') {
+        adminAccount.Password = 'admin';
+        needsSync = true;
+      }
+      if (adminAccount.Role !== 'admin') {
+        adminAccount.Role = 'admin';
+        needsSync = true;
+      }
+      if (needsSync) {
+        try {
+          await setDoc(doc(db, 'teachers', getTeacherDocId('admin')), {
+            Username: 'admin',
+            Password: 'admin',
+            Role: 'admin',
+            ClassAssigned: 'Admin',
+            FullName: adminAccount.FullName || 'Portal Administrator'
+          }, { merge: true });
+        } catch {}
+      }
     }
 
     const students: Student[] = [];

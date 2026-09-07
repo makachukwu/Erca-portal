@@ -1709,7 +1709,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     return {
       Username: currentTeacher?.Username || 'admin',
-      Password: currentTeacher?.Password || '',
+      Password: currentTeacher?.Password || 'admin',
       ClassAssigned: 'Admin',
       FullName: currentTeacher?.FullName || 'Portal Administrator',
       Role: 'admin' as const

@@ -128,15 +128,15 @@ export const StudentResultPortal: React.FC<StudentResultPortalProps> = ({
             </button>
           </div>
 
-          {/* 2. Access Portal Card (Staff, Admin & Students) */}
+          {/* 2. Staff & Admin Portal Card */}
           <div className="bg-slate-50 border-2 border-slate-200 hover:border-blue-700 rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all">
             <div>
               <div className="w-10 h-10 rounded-xl bg-[#0a1e3f] text-amber-400 flex items-center justify-center font-bold mb-3 shadow-xs">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h2 className="text-lg font-black text-[#0a1e3f]">Access Portal</h2>
+              <h2 className="text-lg font-black text-[#0a1e3f]">Staff & Admin Portal</h2>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                Unified gateway for staff, teachers, administrators, and students to access academic operations and records.
+                Dedicated gateway for teachers and administrators to manage continuous assessments, student scores, and records.
               </p>
             </div>
 
@@ -146,7 +146,7 @@ export const StudentResultPortal: React.FC<StudentResultPortalProps> = ({
               className="mt-5 w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-[#0a1e3f] hover:bg-[#132c57] border border-blue-900 shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
             >
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Access Portal Login</span>
+              <span>Staff Login</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

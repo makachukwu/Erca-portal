@@ -82,7 +82,7 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.Role === 'admin' || parsed.Username?.toLowerCase() === 'solly' || parsed.Username?.toLowerCase() === 'admin') {
+        if (parsed.Role === 'admin' || parsed.Username?.toLowerCase() === 'admin') {
           return 'admin';
         }
       } catch {
@@ -272,11 +272,9 @@ export default function App() {
             ) ||
             (prev.Role === 'admin'
               ? response.teachers.find(
-                  (t: Teacher) =>
-                    t.Role === 'admin' ||
-                    t.Username?.toLowerCase() === 'admin' ||
-                    t.Username?.toLowerCase() === 'solly'
-                )
+                  (t: Teacher) => t.Username?.toLowerCase() === 'admin' && t.Role === 'admin'
+                ) ||
+                response.teachers.find((t: Teacher) => t.Role === 'admin')
               : null);
 
           if (match) {
@@ -386,7 +384,7 @@ export default function App() {
     setCurrentStudent(null);
     safeSessionStorage.setItem(TEACHER_AUTH_STORAGE_KEY, JSON.stringify(teacher));
     safeSessionStorage.removeItem(STUDENT_AUTH_STORAGE_KEY);
-    if (teacher.Role === 'admin' || teacher.Username?.toLowerCase() === 'solly' || teacher.Username?.toLowerCase() === 'admin') {
+    if (teacher.Role === 'admin' || teacher.Username?.toLowerCase() === 'admin') {
       setCurrentView('admin');
     } else {
       setCurrentView('roster');
@@ -620,7 +618,6 @@ export default function App() {
   const isAdminUser = Boolean(
     currentTeacher &&
       (currentTeacher.Role === 'admin' ||
-        currentTeacher.Username?.toLowerCase() === 'solly' ||
         currentTeacher.Username?.toLowerCase() === 'admin')
   );
 
@@ -900,8 +897,7 @@ export default function App() {
                   }}
                   isAdminLoggedIn={
                     currentTeacher.Role === 'admin' ||
-                    currentTeacher.Username?.toLowerCase() === 'admin' ||
-                    currentTeacher.Username?.toLowerCase() === 'solly'
+                    currentTeacher.Username?.toLowerCase() === 'admin'
                   }
                   onNavigateToAdmin={() => setCurrentView('admin')}
                   onUpdateWebsiteConfig={async (newCfg) => {

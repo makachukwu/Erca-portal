@@ -103,17 +103,10 @@ export function getSchoolClasses(): string[] {
 
 export const INITIAL_DEFAULT_TEACHERS: Teacher[] = [
   {
-    Username: 'solly',
-    Password: 'silly',
-    ClassAssigned: 'Admin',
-    FullName: 'Administrator',
-    Role: 'admin'
-  },
-  {
     Username: 'admin',
-    Password: 'silly',
+    Password: '',
     ClassAssigned: 'Admin',
-    FullName: 'Administrator',
+    FullName: 'Portal Administrator',
     Role: 'admin'
   },
   {
@@ -585,8 +578,8 @@ export async function loadAllData(forceFresh = false): Promise<{
         const data = d.data() as Teacher;
         teachers.push({
           ...data,
-          Password: data.Password || 'password123',
-          Role: data.Role || (data.Username === 'solly' || data.Username === 'admin' ? 'admin' : 'teacher')
+          Password: data.Password || '',
+          Role: data.Role || (data.Username.toLowerCase() === 'admin' ? 'admin' : 'teacher')
         });
       });
     } else if (cached?.teachers) {
@@ -676,17 +669,16 @@ export async function loadAllData(forceFresh = false): Promise<{
     let finalTeachers = rawTeachers.map((t) => {
       const isAdmin =
         t.Role === 'admin' ||
-        t.Username.toLowerCase() === 'solly' ||
         t.Username.toLowerCase() === 'admin';
       return {
         ...t,
         ClassAssigned: isAdmin ? 'Admin' : t.ClassAssigned,
-        Password: t.Password || (isAdmin ? 'silly' : 'password123'),
+        Password: t.Password || '',
         Role: (isAdmin ? 'admin' : 'teacher') as 'admin' | 'teacher',
         FullName:
           t.FullName ||
           (isAdmin
-            ? 'Not Designated'
+            ? 'Portal Administrator'
             : `Class Teacher (${t.ClassAssigned})`)
       };
     });
@@ -2062,64 +2054,67 @@ export async function updateTeacherCredentials(
           FullName: 'Staff Teacher'
         };
 
-    const cleanUser = (updates.Username?.trim() || existingData.Username).toLowerCase();
-    const isMasterAdmin = cleanUser === 'solly' || cleanUser === 'admin';
+    const cleanUser = (updates.Username?.trim() || existingData.Username || currentUsername).toLowerCase();
+    const isMasterAdmin = cleanUser === 'admin' || updates.Role === 'admin' || existingData.Role === 'admin';
 
     const previousUsernames = Array.from(
       new Set([
         ...(existingData.PreviousUsernames || []),
-        existingData.Username.trim().toLowerCase(),
+        (existingData.Username || '').trim().toLowerCase(),
         currentUsername.trim().toLowerCase()
       ])
-    ).filter((u) => u && u !== (updates.Username?.trim() || existingData.Username).toLowerCase());
+    ).filter((u) => u && u !== (updates.Username?.trim() || existingData.Username || currentUsername).toLowerCase());
 
     const newTeacher: Teacher = {
       ...existingData,
-      Username: updates.Username?.trim() || existingData.Username,
-      Password: updates.Password?.trim() || existingData.Password,
-      FullName: updates.FullName !== undefined ? updates.FullName.trim() : existingData.FullName,
-      ClassAssigned: updates.ClassAssigned?.trim() || existingData.ClassAssigned,
+      Username: updates.Username?.trim() || existingData.Username || currentUsername,
+      Password: updates.Password !== undefined ? updates.Password.trim() : (existingData.Password || ''),
+      FullName: updates.FullName !== undefined ? updates.FullName.trim() : (existingData.FullName || ''),
+      ClassAssigned: updates.ClassAssigned?.trim() || existingData.ClassAssigned || (isMasterAdmin ? 'Admin' : ''),
       Role: updates.Role || (isMasterAdmin ? 'admin' : existingData.Role || 'teacher'),
-      PhotoURL: updates.PhotoURL !== undefined ? updates.PhotoURL.trim() : existingData.PhotoURL,
-      Phone: updates.Phone !== undefined ? updates.Phone.trim() : existingData.Phone,
+      PhotoURL: updates.PhotoURL !== undefined ? updates.PhotoURL.trim() : (existingData.PhotoURL || ''),
+      Phone: updates.Phone !== undefined ? updates.Phone.trim() : (existingData.Phone || ''),
       PreviousUsernames: previousUsernames
     };
 
+    const safeTeacherPayload = cleanFirestorePayload(newTeacher);
     const newDocId = getTeacherDocId(newTeacher.Username);
 
-    if (newDocId !== oldDocId && oldDocSnap.exists()) {
+    if (newDocId !== oldDocId) {
       const batch = writeBatch(db);
-      batch.delete(oldDocRef);
-      batch.set(doc(db, 'teachers', newDocId), newTeacher);
+      if (oldDocSnap.exists()) {
+        batch.delete(oldDocRef);
+      }
+      batch.set(doc(db, 'teachers', newDocId), safeTeacherPayload);
       // Synchronize class teacher assignment in classes collection
-      if (newTeacher.Role !== 'admin' && newTeacher.ClassAssigned) {
+      if (newTeacher.Role !== 'admin' && newTeacher.ClassAssigned && newTeacher.ClassAssigned.toLowerCase() !== 'admin') {
         const clsRef = doc(db, 'classes', getClassDocId(newTeacher.ClassAssigned));
         batch.set(
           clsRef,
-          {
+          cleanFirestorePayload({
             name: newTeacher.ClassAssigned,
             category: detectClassCategory(newTeacher.ClassAssigned),
             classTeacher: newTeacher.FullName,
             teacherUsername: newTeacher.Username,
             updatedAt: new Date().toISOString()
-          },
+          }),
           { merge: true }
         );
       }
       await batch.commit();
     } else {
-      await setDoc(doc(db, 'teachers', newDocId), newTeacher, { merge: true });
-      if (newTeacher.Role !== 'admin' && newTeacher.ClassAssigned) {
+      await setDoc(doc(db, 'teachers', newDocId), safeTeacherPayload, { merge: true });
+      if (newTeacher.Role !== 'admin' && newTeacher.ClassAssigned && newTeacher.ClassAssigned.toLowerCase() !== 'admin') {
         const clsRef = doc(db, 'classes', getClassDocId(newTeacher.ClassAssigned));
         await setDoc(
           clsRef,
-          {
+          cleanFirestorePayload({
             name: newTeacher.ClassAssigned,
             category: detectClassCategory(newTeacher.ClassAssigned),
             classTeacher: newTeacher.FullName,
             teacherUsername: newTeacher.Username,
             updatedAt: new Date().toISOString()
-          },
+          }),
           { merge: true }
         );
       }
@@ -2177,17 +2172,20 @@ export async function createTeacher(
       };
     }
 
-    const isMasterAdmin = cleanUsername === 'solly' || cleanUsername === 'admin' || teacher.Role === 'admin';
+    const isMasterAdmin = cleanUsername === 'admin' || teacher.Role === 'admin';
 
     const newTeacher: Teacher = {
       Username: teacher.Username.trim(),
-      Password: teacher.Password.trim() || 'password123',
+      Password: teacher.Password ? teacher.Password.trim() : '',
       FullName: teacher.FullName?.trim() || `Teacher (${teacher.ClassAssigned})`,
-      ClassAssigned: teacher.ClassAssigned.trim(),
-      Role: isMasterAdmin ? 'admin' : 'teacher'
+      ClassAssigned: teacher.ClassAssigned ? teacher.ClassAssigned.trim() : 'Primary 1',
+      Role: isMasterAdmin ? 'admin' : 'teacher',
+      PhotoURL: teacher.PhotoURL?.trim() || '',
+      Phone: teacher.Phone?.trim() || '',
+      PreviousUsernames: []
     };
 
-    await setDoc(docRef, newTeacher);
+    await setDoc(docRef, cleanFirestorePayload(newTeacher));
     return {
       success: true,
       message: `Staff account "${newTeacher.FullName}" (${newTeacher.Username}) created successfully!`,
@@ -2210,7 +2208,7 @@ export async function deleteTeacher(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const cleanUsername = username.trim().toLowerCase();
-    if (cleanUsername === 'solly' || cleanUsername === 'admin') {
+    if (cleanUsername === 'admin') {
       return {
         success: false,
         message: 'Cannot delete the primary Administrator account.'

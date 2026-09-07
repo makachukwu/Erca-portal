@@ -70,8 +70,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
   const isAdmin = Boolean(
     propIsAdminLoggedIn ||
     currentUser?.role === 'admin' ||
-    currentUser?.username?.toLowerCase() === 'admin' ||
-    currentUser?.username?.toLowerCase() === 'solly'
+    currentUser?.username?.toLowerCase() === 'admin'
   );
 
   // Interactive Tab State: 'student' | 'staff' | 'admissions'
@@ -179,7 +178,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
     } else {
       setTimeout(() => {
         setIsAuthenticating(false);
-        setLookupError(`Incorrect password for ${targetStudent.StudentID}. (Default password is "password")`);
+        setLookupError('Incorrect password entered. Please check your password and try again.');
       }, 350);
     }
   };
@@ -558,10 +557,6 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
                             </>
                           )}
                         </button>
-
-                        <p className="text-[11px] text-slate-500 text-center font-medium">
-                          Default password is <span className="font-mono font-bold text-slate-700">password</span>
-                        </p>
                       </motion.form>
                     )}
                   </AnimatePresence>

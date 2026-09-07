@@ -580,6 +580,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     role?: 'admin' | 'teacher';
   } | null>(null);
 
+  // Quick Reset Password Modal State
+  const [quickResetTeacher, setQuickResetTeacher] = useState<Teacher | null>(null);
+  const [quickResetPassword, setQuickResetPassword] = useState('');
+  const [showQuickResetPass, setShowQuickResetPass] = useState(false);
+
   // Reassign Class Teacher Modal State (dedicated simple modal)
   const [reassigningClass, setReassigningClass] = useState<{
     className: string;
@@ -1038,10 +1043,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       if (res.success) {
         setFeedback({ type: 'success', message: res.message });
-        // Only update currentTeacher session if the user edited their own active account
-        if (
-          editingTeacher.originalUsername.toLowerCase() === currentTeacher.Username.toLowerCase()
-        ) {
+        // Update currentTeacher session if user edited their own account or edited admin credentials while logged in as admin
+        const isEditingSelfOrAdmin =
+          editingTeacher.originalUsername.toLowerCase() === currentTeacher.Username.toLowerCase() ||
+          (currentTeacher.Role === 'admin' && editingTeacher.role === 'admin');
+
+        if (isEditingSelfOrAdmin) {
           onUpdateCurrentTeacher?.({
             ...currentTeacher,
             Username: editingTeacher.username.trim(),
@@ -1134,29 +1141,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Quick reset teacher password
-  const handleQuickResetTeacherPassword = async (teacher: Teacher) => {
-    const newPass = window.prompt(
-      `Enter new password for ${teacher.FullName} (${teacher.Username}):`,
-      'password123'
-    );
-    if (newPass === null) return;
-    if (!newPass.trim()) {
-      alert('Password cannot be empty.');
+  // Open Quick Reset Password Modal
+  const handleOpenQuickResetPassword = (teacher: Teacher) => {
+    setQuickResetTeacher(teacher);
+    setQuickResetPassword('');
+    setShowQuickResetPass(false);
+  };
+
+  // Save Quick Reset Password
+  const handleSaveQuickResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickResetTeacher) return;
+    if (!quickResetPassword.trim()) {
+      setFeedback({ type: 'error', message: 'Password cannot be empty.' });
       return;
     }
 
     setIsProcessing(true);
     setFeedback(null);
     try {
-      const res = await FirebaseService.updateTeacherCredentials(teacher.Username, {
-        Password: newPass.trim()
+      const res = await FirebaseService.updateTeacherCredentials(quickResetTeacher.Username, {
+        Password: quickResetPassword.trim()
       });
       if (res.success) {
         setFeedback({
           type: 'success',
-          message: `Password for ${teacher.FullName} changed to "${newPass.trim()}".`
+          message: `Password for ${quickResetTeacher.FullName} (${quickResetTeacher.Username}) updated successfully!`
         });
+        if (
+          quickResetTeacher.Username.toLowerCase() === currentTeacher.Username.toLowerCase() ||
+          (currentTeacher.Role === 'admin' && quickResetTeacher.Role === 'admin')
+        ) {
+          onUpdateCurrentTeacher?.({
+            ...currentTeacher,
+            Password: quickResetPassword.trim()
+          });
+        }
+        setQuickResetTeacher(null);
+        setQuickResetPassword('');
         await onRefreshData();
       } else {
         setFeedback({ type: 'error', message: res.message });
@@ -1176,8 +1198,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         t.ClassAssigned,
         t.FullName || '',
         t.Username,
-        t.Password || 'password123',
-        t.Role || (t.Username === 'solly' || t.Username === 'admin' ? 'admin' : 'teacher')
+        t.Password || '',
+        t.Role || (t.Username.toLowerCase() === 'admin' ? 'admin' : 'teacher')
       ])
     ];
 
@@ -1668,22 +1690,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Master Admin teacher object
   const masterAdmin = useMemo(() => {
-    return (
-      teachersList.find(
-        (t) =>
-          (currentTeacher.Role === 'admin' &&
-            t.Username.toLowerCase() === currentTeacher.Username.toLowerCase()) ||
-          t.Username.toLowerCase() === 'solly' ||
-          t.Username.toLowerCase() === 'admin' ||
-          t.Role === 'admin'
-      ) || {
-        Username: currentTeacher.Username || 'solly',
-        Password: currentTeacher.Password || 'silly',
-        ClassAssigned: 'Admin',
-        FullName: currentTeacher.FullName || 'Not Designated',
-        Role: 'admin' as const
-      }
-    );
+    // 1. If currently active user is an admin, match their exact username or use currentTeacher
+    if (currentTeacher?.Role === 'admin' || currentTeacher?.Username?.toLowerCase() === 'admin') {
+      const match = teachersList.find(
+        (t) => t.Username.toLowerCase() === currentTeacher.Username.toLowerCase()
+      );
+      if (match) return match;
+      return currentTeacher;
+    }
+
+    // 2. Otherwise locate the admin account from the loaded staff list
+    const adminDoc =
+      teachersList.find((t) => t.Username.toLowerCase() === 'admin' && t.Role === 'admin') ||
+      teachersList.find((t) => t.Username.toLowerCase() === 'admin') ||
+      teachersList.find((t) => t.Role === 'admin');
+
+    if (adminDoc) return adminDoc;
+
+    return {
+      Username: currentTeacher?.Username || 'admin',
+      Password: currentTeacher?.Password || '',
+      ClassAssigned: 'Admin',
+      FullName: currentTeacher?.FullName || 'Portal Administrator',
+      Role: 'admin' as const
+    };
   }, [teachersList, currentTeacher]);
 
   return (
@@ -2442,8 +2472,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     setEditingTeacher({
                       originalUsername: masterAdmin.Username,
                       username: masterAdmin.Username,
-                      password: masterAdmin.Password || 'silly',
-                      fullName: masterAdmin.FullName || 'Not Designated',
+                      password: masterAdmin.Password || '',
+                      fullName: masterAdmin.FullName || 'Portal Administrator',
                       classAssigned: 'Admin',
                       role: 'admin'
                     });
@@ -2590,7 +2620,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <span>{copyStatus === teacher.Username ? 'Copied' : 'Copy'}</span>
                           </button>
                           <button
-                            onClick={() => handleQuickResetTeacherPassword(teacher)}
+                            onClick={() => handleOpenQuickResetPassword(teacher)}
                             className="px-2 py-1 rounded-md bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 font-bold text-xs cursor-pointer inline-flex items-center gap-1"
                             title="Quick Reset Password"
                           >
@@ -2602,7 +2632,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setEditingTeacher({
                                 originalUsername: teacher.Username,
                                 username: teacher.Username,
-                                password: teacher.Password || 'password123',
+                                password: teacher.Password || '',
                                 fullName: teacher.FullName || '',
                                 classAssigned: cls,
                                 role: teacher.Role || 'teacher'
@@ -4264,6 +4294,80 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider cursor-pointer shadow-xs"
               >
                 {isProcessing ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: QUICK RESET STAFF PASSWORD */}
+      {/* ========================================================================= */}
+      {quickResetTeacher && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-3">
+          <form
+            onSubmit={handleSaveQuickResetPassword}
+            className="bg-white rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase">
+                  Reset Staff Password
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {quickResetTeacher.FullName} ({quickResetTeacher.Username})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickResetTeacher(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showQuickResetPass ? 'text' : 'password'}
+                  required
+                  placeholder="Enter new password"
+                  value={quickResetPassword}
+                  onChange={(e) => setQuickResetPassword(e.target.value)}
+                  className="w-full pl-3 pr-9 py-2 text-xs font-mono rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowQuickResetPass(!showQuickResetPass)}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  {showQuickResetPass ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setQuickResetTeacher(null)}
+                className="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider cursor-pointer shadow-xs"
+              >
+                {isProcessing ? 'Updating...' : 'Set Password'}
               </button>
             </div>
           </form>

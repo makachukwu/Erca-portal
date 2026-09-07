@@ -1291,7 +1291,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     required
                     value={currentPasswordInput}
                     onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                    placeholder="Default is 'password'"
+                    placeholder="Enter current password"
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-mono pr-10 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                   />
                   <button

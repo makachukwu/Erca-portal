@@ -70,7 +70,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isAdmin =
     currentTeacher.Role === 'admin' ||
-    currentTeacher.Username.toLowerCase() === 'solly' ||
     currentTeacher.Username.toLowerCase() === 'admin';
 
   const displayName =

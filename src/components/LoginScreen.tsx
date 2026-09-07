@@ -71,31 +71,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setIsSubmitting(true);
 
     if (authRole === 'staff') {
-      const isTryingMasterAdmin =
-        cleanUsername.toLowerCase() === 'solly' ||
-        cleanUsername.toLowerCase() === 'admin';
+      const isTryingMasterAdmin = cleanUsername.toLowerCase() === 'admin';
 
-      // 1. Master Administrator check (Usernames: 'solly' or 'admin')
+      // 1. Master Administrator check (Username: 'admin')
       if (isTryingMasterAdmin) {
-        const adminAccount = teachers.find(
-          (t) =>
-            t.Role === 'admin' ||
-            t.Username.toLowerCase() === cleanUsername.toLowerCase() ||
-            t.Username.toLowerCase() === 'solly' ||
-            t.Username.toLowerCase() === 'admin'
-        ) || {
-          Username: cleanUsername.toLowerCase() === 'admin' ? 'admin' : 'solly',
-          Password: 'silly',
-          ClassAssigned: 'Admin',
-          FullName: 'Not Designated',
-          Role: 'admin' as const
-        };
+        const adminAccount =
+          teachers.find((t) => t.Username.toLowerCase() === 'admin' && t.Role === 'admin') ||
+          teachers.find((t) => t.Username.toLowerCase() === 'admin') ||
+          teachers.find((t) => t.Role === 'admin') || {
+            Username: 'admin',
+            Password: '',
+            ClassAssigned: 'Admin',
+            FullName: 'Portal Administrator',
+            Role: 'admin' as const
+          };
 
-        const actualAdminPass = (adminAccount.Password || 'silly').trim();
-        const isDefaultAdmin = !adminAccount.Password || adminAccount.Password === 'silly';
+        const actualAdminPass = (adminAccount.Password || '').trim();
         const isCorrectAdminPassword =
-          cleanPassword === actualAdminPass ||
-          (isDefaultAdmin && (cleanPassword === 'admin' || cleanPassword === 'password' || cleanPassword === 'silly'));
+          actualAdminPass.length > 0
+            ? cleanPassword === actualAdminPass
+            : cleanPassword === 'admin';
 
         if (isCorrectAdminPassword) {
           setTimeout(() => {
@@ -110,7 +105,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         } else {
           setTimeout(() => {
             setIsSubmitting(false);
-            setError('Invalid Administrator password. Default password is "silly" or "admin".');
+            setError('Incorrect administrator password. Please try again.');
           }, 300);
           return;
         }
@@ -147,11 +142,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (matched) {
         // If matched account is an admin account, enforce admin password
         if (matched.Role === 'admin') {
-          const actualAdminPass = (matched.Password || 'silly').trim();
-          const isDefaultAdmin = !matched.Password || matched.Password === 'silly';
+          const actualAdminPass = (matched.Password || '').trim();
           const isCorrectAdminPassword =
-            cleanPassword === actualAdminPass ||
-            (isDefaultAdmin && (cleanPassword === 'admin' || cleanPassword === 'password' || cleanPassword === 'silly'));
+            actualAdminPass.length > 0
+              ? cleanPassword === actualAdminPass
+              : cleanPassword === 'admin';
 
           if (isCorrectAdminPassword) {
             setTimeout(() => {
@@ -162,7 +157,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           } else {
             setTimeout(() => {
               setIsSubmitting(false);
-              setError('Invalid Administrator password. Default password is "silly" or "admin".');
+              setError('Incorrect administrator password. Please try again.');
             }, 300);
             return;
           }
@@ -186,7 +181,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         } else {
           setTimeout(() => {
             setIsSubmitting(false);
-            setError(`Invalid password for "${matched.Username}". Default teacher password is "password123".`);
+            setError('Incorrect password. Please verify your credentials and try again.');
           }, 300);
           return;
         }
@@ -211,7 +206,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           setTimeout(() => {
             setIsSubmitting(false);
             setAuthRole('student');
-            setError(`Student ID detected (${potentialStudent.StudentID})! Default password is "password". Please verify and try again.`);
+            setError('Incorrect password. Please try again.');
           }, 250);
           return;
         }
@@ -220,7 +215,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       // No matching staff account found
       setTimeout(() => {
         setIsSubmitting(false);
-        setError('Staff account not found. For Admin access use username "admin" (password: "silly" or "admin").');
+        setError('Staff account not found. Please verify your username and password.');
       }, 300);
       return;
     } else {
@@ -230,25 +225,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const cleanId = cleanUsername.toLowerCase().replace(/[\s/_-]/g, '');
 
       // 1. First check if user accidentally entered Staff / Admin credentials on the Student tab
-      const isTryingAdmin =
-        cleanUsername.toLowerCase() === 'admin' ||
-        cleanUsername.toLowerCase() === 'solly';
+      const isTryingAdmin = cleanUsername.toLowerCase() === 'admin';
 
       if (isTryingAdmin) {
-        const adminAccount = teachers.find(
-          (t) => t.Role === 'admin' || t.Username.toLowerCase() === cleanUsername.toLowerCase()
-        ) || {
-          Username: cleanUsername.toLowerCase() === 'admin' ? 'admin' : 'solly',
-          Password: 'silly',
-          ClassAssigned: 'Admin',
-          FullName: 'Not Designated',
-          Role: 'admin' as const
-        };
-        const actualAdminPass = (adminAccount.Password || 'silly').trim();
-        const isDefaultAdmin = !adminAccount.Password || adminAccount.Password === 'silly';
+        const adminAccount =
+          teachers.find((t) => t.Username.toLowerCase() === 'admin' && t.Role === 'admin') ||
+          teachers.find((t) => t.Username.toLowerCase() === 'admin') ||
+          teachers.find((t) => t.Role === 'admin') || {
+            Username: 'admin',
+            Password: '',
+            ClassAssigned: 'Admin',
+            FullName: 'Portal Administrator',
+            Role: 'admin' as const
+          };
+        const actualAdminPass = (adminAccount.Password || '').trim();
         const isCorrectAdminPassword =
-          cleanPassword === actualAdminPass ||
-          (isDefaultAdmin && (cleanPassword === 'admin' || cleanPassword === 'password' || cleanPassword === 'silly'));
+          actualAdminPass.length > 0
+            ? cleanPassword === actualAdminPass
+            : cleanPassword === 'admin';
 
         if (isCorrectAdminPassword) {
           setTimeout(() => {
@@ -260,7 +254,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           setTimeout(() => {
             setIsSubmitting(false);
             setAuthRole('staff');
-            setError('Administrator username detected! Switched to Staff Login. Default admin password is "silly" or "admin".');
+            setError('Incorrect administrator password. Please try again.');
           }, 250);
           return;
         }
@@ -286,7 +280,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           setTimeout(() => {
             setIsSubmitting(false);
             setAuthRole('staff');
-            setError(`Staff account detected (${potentialTeacher.Username})! Switched to Staff Login. Default password is "password123".`);
+            setError('Incorrect password. Please try again.');
           }, 250);
           return;
         }
@@ -331,9 +325,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       } else {
         setTimeout(() => {
           setIsSubmitting(false);
-          setError(
-            `Incorrect password for Student ID "${matchedStudent.StudentID}". (Default student password is "password").`
-          );
+          setError('Incorrect password entered. Please check your password and try again.');
         }, 300);
       }
     }

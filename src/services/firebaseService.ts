@@ -604,11 +604,11 @@ export async function loadAllData(forceFresh = false): Promise<{
       } catch {}
     } else {
       let needsSync = false;
-      if (adminAccount.Username !== 'admin') {
+      if (!adminAccount.Username) {
         adminAccount.Username = 'admin';
         needsSync = true;
       }
-      if (adminAccount.Password !== 'admin') {
+      if (!adminAccount.Password) {
         adminAccount.Password = 'admin';
         needsSync = true;
       }
@@ -618,9 +618,9 @@ export async function loadAllData(forceFresh = false): Promise<{
       }
       if (needsSync) {
         try {
-          await setDoc(doc(db, 'teachers', getTeacherDocId('admin')), {
-            Username: 'admin',
-            Password: 'admin',
+          await setDoc(doc(db, 'teachers', getTeacherDocId(adminAccount.Username || 'admin')), {
+            Username: adminAccount.Username || 'admin',
+            Password: adminAccount.Password || 'admin',
             Role: 'admin',
             ClassAssigned: 'Admin',
             FullName: adminAccount.FullName || 'Portal Administrator'
@@ -2082,20 +2082,56 @@ export async function updateTeacherCredentials(
   }
 ): Promise<{ success: boolean; message: string; teacher?: Teacher }> {
   try {
-    const oldDocId = getTeacherDocId(currentUsername);
+    const cleanCurrentUsername = currentUsername.trim().toLowerCase();
+    const oldDocId = getTeacherDocId(cleanCurrentUsername);
     const oldDocRef = doc(db, 'teachers', oldDocId);
     const oldDocSnap = await getDoc(oldDocRef);
 
-    const existingData = oldDocSnap.exists()
-      ? (oldDocSnap.data() as Teacher)
-      : INITIAL_DEFAULT_TEACHERS.find(
-          (t) => t.Username.toLowerCase() === currentUsername.toLowerCase()
+    let existingDocId = oldDocId;
+    let existingDocRef = oldDocRef;
+    let existingData: Teacher | null = null;
+
+    if (oldDocSnap.exists()) {
+      existingData = oldDocSnap.data() as Teacher;
+    } else {
+      // Find document in teachers collection by username or previous usernames or assigned class
+      try {
+        const allTeachersSnap = await getDocs(collection(db, 'teachers'));
+        for (const d of allTeachersSnap.docs) {
+          const t = d.data() as Teacher;
+          const u = (t.Username || '').trim().toLowerCase();
+          const prevU = (t.PreviousUsernames || []).map((x) => x.trim().toLowerCase());
+          if (
+            u === cleanCurrentUsername ||
+            prevU.includes(cleanCurrentUsername) ||
+            (updates.ClassAssigned && isMatchingClass(t.ClassAssigned, updates.ClassAssigned) && t.Role !== 'admin')
+          ) {
+            existingDocId = d.id;
+            existingDocRef = d.ref;
+            existingData = t;
+            break;
+          }
+        }
+      } catch (scanErr) {
+        console.warn('Teacher collection scan notice:', scanErr);
+      }
+    }
+
+    if (!existingData) {
+      const cached = getCachedSchoolData();
+      existingData =
+        cached?.teachers?.find((t) => t.Username.toLowerCase() === cleanCurrentUsername) ||
+        INITIAL_DEFAULT_TEACHERS.find((t) => t.Username.toLowerCase() === cleanCurrentUsername) ||
+        INITIAL_DEFAULT_TEACHERS.find(
+          (t) => updates.ClassAssigned && isMatchingClass(t.ClassAssigned, updates.ClassAssigned) && t.Role !== 'admin'
         ) || {
-          Username: currentUsername,
+          Username: cleanCurrentUsername,
           Password: 'password123',
-          ClassAssigned: 'Primary 4',
-          FullName: 'Staff Teacher'
+          ClassAssigned: updates.ClassAssigned || 'Primary 1',
+          FullName: updates.FullName || 'Staff Teacher',
+          Role: updates.Role || 'teacher'
         };
+    }
 
     const cleanUser = (updates.Username?.trim() || existingData.Username || currentUsername).toLowerCase();
     const isMasterAdmin = cleanUser === 'admin' || updates.Role === 'admin' || existingData.Role === 'admin';
@@ -2123,12 +2159,12 @@ export async function updateTeacherCredentials(
     const safeTeacherPayload = cleanFirestorePayload(newTeacher);
     const newDocId = getTeacherDocId(newTeacher.Username);
 
-    if (newDocId !== oldDocId) {
+    if (newDocId !== existingDocId) {
       const batch = writeBatch(db);
-      if (oldDocSnap.exists()) {
-        batch.delete(oldDocRef);
+      if (oldDocSnap.exists() || existingDocId !== newDocId) {
+        batch.delete(existingDocRef);
       }
-      batch.set(doc(db, 'teachers', newDocId), safeTeacherPayload);
+      batch.set(doc(db, 'teachers', newDocId), safeTeacherPayload, { merge: true });
       // Synchronize class teacher assignment in classes collection
       if (newTeacher.Role !== 'admin' && newTeacher.ClassAssigned && newTeacher.ClassAssigned.toLowerCase() !== 'admin') {
         const clsRef = doc(db, 'classes', getClassDocId(newTeacher.ClassAssigned));
@@ -2328,6 +2364,13 @@ export async function updateStudentPassword(
       const defStudent = INITIAL_DEFAULT_STUDENTS.find((s) => s.StudentID.toLowerCase() === studentId.toLowerCase());
       if (defStudent) {
         await setDoc(studentDocRef, { ...defStudent, Password: newPassword.trim() }, { merge: true });
+        const cached = getCachedSchoolData();
+        if (cached) {
+          const updated = (cached.students || []).map((s) =>
+            s.StudentID.toLowerCase() === studentId.toLowerCase() ? { ...s, Password: newPassword.trim() } : s
+          );
+          setCachedSchoolData({ ...cached, students: updated });
+        }
         return {
           success: true,
           message: 'Password created and updated successfully in Firebase.'
@@ -2337,6 +2380,14 @@ export async function updateStudentPassword(
     }
 
     await setDoc(studentDocRef, { Password: newPassword.trim() }, { merge: true });
+
+    const cached = getCachedSchoolData();
+    if (cached) {
+      const updated = (cached.students || []).map((s) =>
+        s.StudentID.toLowerCase() === studentId.toLowerCase() ? { ...s, Password: newPassword.trim() } : s
+      );
+      setCachedSchoolData({ ...cached, students: updated });
+    }
 
     return {
       success: true,

@@ -87,8 +87,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           };
 
         const actualAdminPass = (adminAccount.Password || 'admin').trim();
-        const isCorrectAdminPassword =
-          cleanPassword === actualAdminPass || cleanPassword === 'admin';
+        const isCorrectAdminPassword = cleanPassword === actualAdminPass;
 
         if (isCorrectAdminPassword) {
           setTimeout(() => {
@@ -141,8 +140,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         // If matched account is an admin account, enforce admin password
         if (matched.Role === 'admin') {
           const actualAdminPass = (matched.Password || 'admin').trim();
-          const isCorrectAdminPassword =
-            cleanPassword === actualAdminPass || cleanPassword === 'admin';
+          const isCorrectAdminPassword = cleanPassword === actualAdminPass;
 
           if (isCorrectAdminPassword) {
             setTimeout(() => {
@@ -192,7 +190,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       if (potentialStudent && onStudentLogin) {
         const actualPass = (potentialStudent.Password || 'password').trim();
-        if (cleanPassword === actualPass || cleanPassword === 'password') {
+        if (cleanPassword === actualPass) {
           setTimeout(() => {
             setIsSubmitting(false);
             onStudentLogin(potentialStudent);
@@ -235,8 +233,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             Role: 'admin' as const
           };
         const actualAdminPass = (adminAccount.Password || 'admin').trim();
-        const isCorrectAdminPassword =
-          cleanPassword === actualAdminPass || cleanPassword === 'admin';
+        const isCorrectAdminPassword = cleanPassword === actualAdminPass;
 
         if (isCorrectAdminPassword) {
           setTimeout(() => {
@@ -309,7 +306,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       // 4. Verify password for matched student
       const actualPass = (matchedStudent.Password || 'password').trim();
-      const pwdMatches = cleanPassword === actualPass || cleanPassword === 'password';
+      const pwdMatches = cleanPassword === actualPass;
 
       if (pwdMatches && onStudentLogin) {
         setTimeout(() => {

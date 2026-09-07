@@ -164,7 +164,7 @@ export const SchoolHomepage: React.FC<SchoolHomepageProps> = ({
     }
 
     const actualPass = (targetStudent.Password || 'password').trim();
-    const isMatch = cleanPwd === actualPass || cleanPwd === 'password';
+    const isMatch = cleanPwd === actualPass;
 
     if (isMatch) {
       setTimeout(() => {

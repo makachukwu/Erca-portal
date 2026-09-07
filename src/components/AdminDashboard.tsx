@@ -1161,7 +1161,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setFeedback(null);
     try {
       const res = await FirebaseService.updateTeacherCredentials(quickResetTeacher.Username, {
-        Password: quickResetPassword.trim()
+        Username: quickResetTeacher.Username,
+        Password: quickResetPassword.trim(),
+        FullName: quickResetTeacher.FullName,
+        ClassAssigned: quickResetTeacher.ClassAssigned,
+        Role: quickResetTeacher.Role
       });
       if (res.success) {
         setFeedback({

@@ -270,12 +270,17 @@ export default function App() {
             response.teachers.find(
               (t: Teacher) => t.Username?.toLowerCase().trim() === cleanUser
             ) ||
+            response.teachers.find((t: Teacher) =>
+              t.PreviousUsernames?.some((pu) => pu.toLowerCase().trim() === cleanUser)
+            ) ||
             (prev.Role === 'admin'
               ? response.teachers.find(
                   (t: Teacher) => t.Username?.toLowerCase() === 'admin' && t.Role === 'admin'
                 ) ||
                 response.teachers.find((t: Teacher) => t.Role === 'admin')
-              : null);
+              : response.teachers.find(
+                  (t: Teacher) => t.Role !== 'admin' && isMatchingClass(t.ClassAssigned, prev.ClassAssigned)
+                ));
 
           if (match) {
             const updated = {
@@ -832,32 +837,62 @@ export default function App() {
               )}
 
               {/* View 2: Report Card Score Entry (Easy single sheet score entry) */}
-              {currentView === 'entry' && selectedStudent && (
-                <ReportCardEntry
-                  student={selectedStudent}
-                  allClassStudents={classStudents}
-                  session={session}
-                  term={term}
-                  subjectsList={subjectsList}
-                  allScores={allScores}
-                  allSummaries={allSummaries}
-                  onSaveScores={handleUpdateStudentScores}
-                  onDeleteReportCard={handleDeleteReportCard}
-                  onBackToRoster={() => {
-                    setSelectedStudent(null);
-                    setCurrentView('roster');
-                    refreshAllData();
-                  }}
-                  onNavigateToStudent={(next) => {
-                    setSelectedStudent(next);
-                    refreshAllData();
-                  }}
-                  onSaveSuccess={() => {
-                    refreshAllData();
-                  }}
-                  onOpenSubjectManager={() => setIsSubjectManagerOpen(true)}
-                  onEditingChange={handleEditingChange}
-                />
+              {currentView === 'entry' && (
+                selectedStudent ? (
+                  <ReportCardEntry
+                    student={selectedStudent}
+                    allClassStudents={classStudents}
+                    session={session}
+                    term={term}
+                    subjectsList={subjectsList}
+                    allScores={allScores}
+                    allSummaries={allSummaries}
+                    onSaveScores={handleUpdateStudentScores}
+                    onDeleteReportCard={handleDeleteReportCard}
+                    onBackToRoster={() => {
+                      setSelectedStudent(null);
+                      setCurrentView('roster');
+                      refreshAllData();
+                    }}
+                    onNavigateToStudent={(next) => {
+                      setSelectedStudent(next);
+                      refreshAllData();
+                    }}
+                    onSaveSuccess={() => {
+                      refreshAllData();
+                    }}
+                    onOpenSubjectManager={() => setIsSubjectManagerOpen(true)}
+                    onEditingChange={handleEditingChange}
+                  />
+                ) : (
+                  <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center max-w-md mx-auto my-12 space-y-4 shadow-sm">
+                    <div className="w-14 h-14 bg-amber-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                      <AlertTriangle className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900">No Pupil Selected</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Please choose a pupil from your class roster to view or record their continuous assessment and terminal examination scores.
+                    </p>
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                      {classStudents.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStudent(classStudents[0])}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-xs"
+                        >
+                          Select {classStudents[0].FullName}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentView('roster')}
+                        className="w-full sm:w-auto px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-xs"
+                      >
+                        Return to Class Roster
+                      </button>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* View 3: Class Summary Broadsheet & Rankings */}
